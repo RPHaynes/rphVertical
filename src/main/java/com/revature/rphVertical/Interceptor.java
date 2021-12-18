@@ -27,21 +27,12 @@ import java.util.Arrays;
 
 public class Interceptor implements BeanPostProcessor {
 	@Autowired
-	DataSource dataSource;
-
-	@Autowired
 	AutowireCapableBeanFactory beanFactory;
-
 	@Autowired
 	EntityManagerFactory emf;
-
-
-
-
 	public Interceptor() {
 		System.out.println("CustomBeanPostProcessor - CustomBeanPostProcessor.new invoked");
 	}
-
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) {
 		if (bean.getClass().getDeclaredAnnotation(Service.class) != null) System.out.println(beanName);
@@ -49,16 +40,6 @@ public class Interceptor implements BeanPostProcessor {
 		EntityManager entityManager = emf.createEntityManager();
 		System.out.println("Creating Controller"+bean.getClass());
 		System.out.println(entityManager);
-
-
-
-
-
-
-
-
-
-
 		TypeDescription.Generic generic = TypeDescription.Generic.Builder.parameterizedType(JpaRepository.class,bean.getClass(), Arrays.stream(bean.getClass().getDeclaredFields()).filter(x->x.isAnnotationPresent(Id.class)).findFirst().get().getClass()).build();
 		Class<?> repo = new ByteBuddy().makeInterface(generic).annotateType(AnnotationDescription.Builder.ofType(Repository.class).build()).make().load(getClass().getClassLoader()).getLoaded();
 		TypeDescription.Generic genericService = TypeDescription.Generic.Builder.parameterizedType(InterceptService.class,bean.getClass(),Arrays.stream(bean.getClass().getDeclaredFields()).filter(x->x.isAnnotationPresent(Id.class)).findFirst().get().getClass()).build();
@@ -78,10 +59,6 @@ public class Interceptor implements BeanPostProcessor {
 		InterceptController c = (InterceptController) (beanFactory.getBean(beanName+"Controller"));
 		c.settClass(bean.getClass());
 		c.setService(s);
-
-
-
-		//Arrays.stream(clazz.getDeclaredMethods()).forEach(x->System.out.println(x.getName()));
 		return bean;
 	}
 
