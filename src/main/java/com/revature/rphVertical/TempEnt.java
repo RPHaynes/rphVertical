@@ -16,4 +16,6 @@ public class TempEnt {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	int i;
+
+	public boolean aBoolean;
 }

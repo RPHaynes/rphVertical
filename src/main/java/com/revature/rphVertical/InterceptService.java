@@ -1,6 +1,5 @@
 package com.revature.rphVertical;
 
-
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -9,28 +8,76 @@ import org.springframework.data.repository.query.FluentQuery;
 
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-
-
 import javax.persistence.EntityManager;
-import java.util.*;
-import java.util.function.Function;
+import javax.persistence.Query;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class InterceptService<T,ID> {
 	SimpleJpaRepository<T,ID> repo;
 	EntityManager entityManager;
+	Class<?> clazz;
+
+	public void settClass(Class<T> tClass) {
+		clazz = tClass;
+	}
 
 	public void setEntityManager(EntityManager entityManager) {
-		entityManager.getTransaction().begin();
 		this.entityManager = entityManager;
-		entityManager.getTransaction().commit();
 	}
 
 	public void setRepo(SimpleJpaRepository<T, ID> repo) {
-		entityManager.getTransaction().begin();
 		this.repo = repo;
-		entityManager.getTransaction().commit();
+	}
+
+
+	public T customSelectOne(Map<String,Object> fields) {
+		AtomicInteger i = new AtomicInteger(0);
+
+		String qString = "SELECT c FROM "+
+			clazz.getSimpleName()+
+			(fields.keySet().stream().map(
+				(key)->{
+					if (i.getAndIncrement() == 0)
+					{return " c WHERE c."+key+" = :"+key;}
+					else
+					{return " AND c."+key+" = :"+key;}})
+				.collect(Collectors.joining()));
+
+		System.out.println(qString);
+
+		Query query = entityManager.createQuery(qString);
+
+		fields.keySet().forEach((key)->query.setParameter(key,fields.get(key)));
+
+		List l = query.getResultList();
+
+		return  (l.size() == 0)?null: (T) l.get(0);
+	}
+	public List<T> customSelectAll(Map<String,Object> fields) {
+		AtomicInteger i = new AtomicInteger(0);
+
+		String qString = "SELECT c FROM "+
+			clazz.getSimpleName()+
+			(fields.keySet().stream().map(
+				(key)->{
+					if (i.getAndIncrement() == 0)
+					{return " c WHERE c."+key+" = :"+key;}
+					else
+					{return " AND c."+key+" = :"+key;}})
+				.collect(Collectors.joining()));
+
+		System.out.println(qString);
+
+		Query query = entityManager.createQuery(qString);
+
+		fields.keySet().forEach((key)->query.setParameter(key,fields.get(key)));
+
+		return  (List<T>) query.getResultList();
 	}
 
 
