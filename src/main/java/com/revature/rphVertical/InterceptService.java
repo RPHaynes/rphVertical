@@ -59,24 +59,36 @@ public class InterceptService<T,ID> {
 		return  (l.size() == 0)?null: (T) l.get(0);
 	}
 	public List<T> customSelectAll(Map<String,Object> fields) {
-		AtomicInteger i = new AtomicInteger(0);
-
-		String qString = "SELECT c FROM "+
-			clazz.getSimpleName()+
-			(fields.keySet().stream().map(
-				(key)->{
-					if (i.getAndIncrement() == 0)
-					{return " c WHERE c."+key+" = :"+key;}
-					else
-					{return " AND c."+key+" = :"+key;}})
-				.collect(Collectors.joining()));
-
+		StringBuilder qString = new StringBuilder("SELECT"+" _"+clazz.getSimpleName()+" FROM "+clazz.getSimpleName()+" _"+clazz.getSimpleName());
+		Set<String> joinSet = new HashSet<>();
+		String[] keys = fields.keySet().toArray(new String[0]);
+		for(String key: keys){
+			String[] parts = key.split("\\.");
+			for (int j = 0; j < parts.length-1; j++) {
+				if (j == 0) joinSet.add(" JOIN"+" _"+clazz.getSimpleName()+"."+parts[j]+" _"+parts[j]);
+				else joinSet.add(" JOIN"+" _"+parts[j-1]+"."+parts[j]+" _"+parts[j]);
+			}
+		}
+		System.out.println(joinSet);
+		for (String s:joinSet) {qString.append(s);}
+		joinSet = new HashSet<>();
+		joinSet.add(" WHERE");
+		int i =0;
+		for(String key: keys){
+			String[] parts = key.split("\\.");
+			if (parts.length == 1) {
+				if (joinSet.add(" _" + clazz.getSimpleName() + "." + parts[0] + " = ?" + i)) i++;
+			}
+			else
+				if (joinSet.add(" _" + parts[parts.length-2] + "." + parts[parts.length-1] + " = ?" + i)) i++;
+		}
+		for (String s:joinSet) {qString.append(s);}
 		System.out.println(qString);
-
-		Query query = entityManager.createQuery(qString);
-
-		fields.keySet().forEach((key)->query.setParameter(key,fields.get(key)));
-
+		Query query = entityManager.createQuery(qString.toString());
+		for (int j = 0; j < i; j++) {
+			query.setParameter(j,fields.get(keys[j]));
+		}
+		System.out.println(qString);
 		return  (List<T>) query.getResultList();
 	}
 

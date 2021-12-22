@@ -18,4 +18,6 @@ public class TempEnt {
 	int i;
 
 	public boolean aBoolean;
+	@OneToOne(cascade = CascadeType.ALL)
+	public TempNestedEnt nestedEnt;
 }

@@ -19,12 +19,15 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.persistence.*;
 import javax.persistence.metamodel.SingularAttribute;
 import javax.sql.DataSource;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Interceptor implements BeanPostProcessor {
 	@Autowired
@@ -44,25 +47,9 @@ public class Interceptor implements BeanPostProcessor {
 
 		EntityManager entityManager = emf.createEntityManager();
 
-		System.out.println("Creating Controller"+bean.getClass());
+		System.out.println("Creating Controller "+bean.getClass());
 
 		System.out.println(entityManager);
-
-		TypeDescription.Generic generic = TypeDescription.Generic.Builder
-			.parameterizedType(JpaRepository.class,bean.getClass(),
-				Arrays.stream(bean.getClass().getDeclaredFields())
-					.filter(x->x.isAnnotationPresent(Id.class))
-					.findFirst()
-					.get()
-					.getClass())
-			.build();
-
-		Class<?> repo = new ByteBuddy().makeInterface(generic)
-			.annotateType(AnnotationDescription.Builder.ofType(Repository.class).build())
-			.make()
-			.load(getClass().getClassLoader())
-			.getLoaded();
-
 		TypeDescription.Generic genericService =
 			TypeDescription.Generic.Builder
 				.parameterizedType(InterceptService.class,
@@ -107,15 +94,13 @@ public class Interceptor implements BeanPostProcessor {
 
 		Class<InterceptController> controller = (Class<InterceptController>) new ByteBuddy()
 			.subclass(genericController)
-			.annotateType(AnnotationDescription.Builder.ofType(RestController.class).build(),
-				AnnotationDescription
-					.Builder
-					.ofType(Transactional.class)
-					.build())
+			.annotateType(AnnotationDescription.Builder.ofType(RestController.class).build())
+			.annotateType(AnnotationDescription.Builder.ofType(RequestMapping.class).defineArray("path","/"+beanName).build())
 			.make()
 			.load(getClass().getClassLoader())
 			.getLoaded();
 
+		System.out.println(Arrays.toString(controller.getDeclaredAnnotations()));
 		beanDefinition = new RootBeanDefinition( controller);
 
 		registry.registerBeanDefinition(beanName+"Controller", beanDefinition);
